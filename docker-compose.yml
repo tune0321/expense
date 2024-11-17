@@ -10,8 +10,9 @@ services:
     volumes:
       - ./frontend:/app
       - /app/node_modules
+      - /app/.next
     environment:
-      - REACT_APP_API_URL=http://backend:4000
+      - NODE_ENV=development
     depends_on:
       - backend
 
@@ -24,4 +25,5 @@ services:
     volumes:
       - ./backend:/app
     environment:
+      - FLASK_APP=app.py
       - FLASK_ENV=development
