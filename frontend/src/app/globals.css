@@ -13,46 +13,50 @@ body {
   background: rgb(var(--background-rgb));
 }
 
-/* テーブルのスタイル */
+/* ボタンの基本スタイル */
+button {
+  padding: 4px 8px;
+  border: 1px solid #ccc;
+  background: #f5f5f5;
+}
+
+button:hover {
+  background: #e5e5e5;
+}
+
+/* テーブルの基本スタイル */
 table {
-  @apply w-full border-collapse bg-white;
+  width: 100%;
+  border-collapse: collapse;
 }
 
 th, td {
-  @apply border border-gray-200 p-2;
+  padding: 4px 8px;
+  border: 1px solid #ccc;
+  text-align: left;
 }
 
 th {
-  @apply bg-gray-50 font-medium text-left;
+  background: #f5f5f5;
+  font-weight: normal;
 }
 
-tr:hover {
-  @apply bg-gray-50;
-}
-
-/* 入力フォームのスタイル */
+/* フォーム要素の基本スタイル */
 input, select {
-  @apply border border-gray-300 rounded p-2 w-full;
-  @apply focus:outline-none focus:border-blue-500;
+  width: 100%;
+  padding: 4px;
+  border: none;
+  outline: none;
+  background: transparent;
 }
 
-/* ボタンのスタイル */
-button {
-  @apply px-4 py-2 rounded;
-  @apply transition-colors duration-200;
-}
-
-button.primary {
-  @apply bg-blue-500 text-white;
-  @apply hover:bg-blue-600;
-}
-
-button.secondary {
-  @apply bg-gray-200;
-  @apply hover:bg-gray-300;
-}
-
-/* コンテナのスタイル */
+/* コンテナの基本スタイル */
 .container {
-  @apply max-w-4xl mx-auto bg-white p-4 shadow-sm;
+  background: white;
+  padding: 16px;
+}
+
+/* 金額セルの右寄せ */
+.amount {
+  text-align: right;
 }
