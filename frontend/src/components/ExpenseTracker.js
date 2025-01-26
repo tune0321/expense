@@ -1,29 +1,29 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { PlusCircle, Trash2, Camera } from 'lucide-react';
+import { PlusCircle, Trash2, Camera, Search, List } from 'lucide-react';
 
-// Next.jsの環境変数はNEXT_PUBLIC_で始まるものを直接参照
 const API_URL = 'http://localhost:4000';
 
 const ExpenseTracker = () => {
-  // 以下のコードは同じなので省略せず完全に記載
+  const [activeTab, setActiveTab] = useState('list');
   const [expenses, setExpenses] = useState([]);
+  const [filteredExpenses, setFilteredExpenses] = useState([]);
   const [newExpense, setNewExpense] = useState({
     date: '',
     category: '',
     amount: '',
     description: ''
   });
+  const [searchTerm, setSearchTerm] = useState('');
 
   const categories = [
-    '食費',
+    'ほ食費',
     '交通費',
-    '住居費',
-    '光熱費',
-    '通信費',
     '娯楽費',
+    '通信費',
+    '医療費',
+    '教育費',
     'その他'
   ];
 
@@ -32,6 +32,7 @@ const ExpenseTracker = () => {
       const response = await fetch(`${API_URL}/api/expenses`);
       const data = await response.json();
       setExpenses(data);
+      setFilteredExpenses(data);
     } catch (error) {
       console.error('Error fetching expenses:', error);
       alert('データの取得に失敗しました');
@@ -56,6 +57,7 @@ const ExpenseTracker = () => {
       if (response.ok) {
         const addedExpense = await response.json();
         setExpenses([...expenses, addedExpense]);
+        setFilteredExpenses([...expenses, addedExpense]);
         setNewExpense({
           date: '',
           category: '',
@@ -67,7 +69,7 @@ const ExpenseTracker = () => {
       }
     } catch (error) {
       console.error('Error adding expense:', error);
-      alert('支出の追加に失敗しました');
+      alert('経費の追加に失敗しました');
     }
   };
 
@@ -78,13 +80,15 @@ const ExpenseTracker = () => {
       });
 
       if (response.ok) {
-        setExpenses(expenses.filter(expense => expense._id !== id));
+        const updatedExpenses = expenses.filter(expense => expense._id !== id);
+        setExpenses(updatedExpenses);
+        setFilteredExpenses(updatedExpenses);
       } else {
         throw new Error('Failed to delete expense');
       }
     } catch (error) {
       console.error('Error deleting expense:', error);
-      alert('支出の削除に失敗しました');
+      alert('経費の削除に失敗しました');
     }
   };
 
@@ -92,8 +96,16 @@ const ExpenseTracker = () => {
     fetchExpenses();
   }, []);
 
+  useEffect(() => {
+    const filtered = expenses.filter(expense => 
+      expense.category.includes(searchTerm) || 
+      expense.description.includes(searchTerm)
+    );
+    setFilteredExpenses(filtered);
+  }, [searchTerm, expenses]);
+
   const calculateTotal = () => {
-    return expenses.reduce((sum, expense) => sum + Number(expense.amount), 0);
+    return filteredExpenses.reduce((sum, expense) => sum + Number(expense.amount), 0);
   };
 
   const formatDate = (dateString) => {
@@ -101,110 +113,158 @@ const ExpenseTracker = () => {
     return `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')}`;
   };
 
+  const renderContent = () => {
+    switch(activeTab) {
+      case 'add':
+        return renderAddExpenseForm();
+      case 'search':
+        return renderSearchSection();
+      case 'list':
+      default:
+        return renderExpenseList();
+    }
+  };
+
+  const renderAddExpenseForm = () => (
+    <div className="mb-6 space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div className="flex items-center">
+          <span className="w-20">日付</span>
+          <input
+            type="date"
+            value={newExpense.date}
+            onChange={(e) => setNewExpense({ ...newExpense, date: e.target.value })}
+            className="flex-1 p-2 border rounded"
+          />
+        </div>
+        <div className="flex items-center">
+          <span className="w-20">金額</span>
+          <input
+            type="number"
+            value={newExpense.amount}
+            onChange={(e) => setNewExpense({ ...newExpense, amount: e.target.value })}
+            className="flex-1 p-2 border rounded"
+          />
+        </div>
+        <div className="flex items-center">
+          <span className="w-20">カテゴリ</span>
+          <select
+            value={newExpense.category}
+            onChange={(e) => setNewExpense({ ...newExpense, category: e.target.value })}
+            className="flex-1 p-2 border rounded"
+          >
+            <option value="">選択してください</option>
+            {categories.map(cat => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
+          </select>
+        </div>
+        <div className="flex items-center">
+          <span className="w-20">メモ</span>
+          <input
+            type="text"
+            value={newExpense.description}
+            onChange={(e) => setNewExpense({ ...newExpense, description: e.target.value })}
+            className="flex-1 p-2 border rounded"
+          />
+        </div>
+      </div>
+      <button
+        onClick={addExpense}
+        className="w-full bg-blue-500 text-white p-2 rounded flex items-center justify-center gap-2 hover:bg-blue-600"
+      >
+        <PlusCircle className="w-5 h-5" />
+        追加
+      </button>
+    </div>
+  );
+
+  const renderSearchSection = () => (
+    <div className="mb-6">
+      <div className="flex items-center mb-4">
+        <input 
+          type="text" 
+          placeholder="カテゴリまたはメモを検索" 
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="flex-1 p-2 border rounded mr-2"
+        />
+        <Search className="w-6 h-6 text-gray-500" />
+      </div>
+      {renderExpenseList()}
+    </div>
+  );
+
+  const renderExpenseList = () => (
+    <div className="border rounded overflow-hidden">
+      <table className="w-full">
+        <thead>
+          <tr className="bg-gray-100">
+            <th className="p-2 border-b text-left">日付</th>
+            <th className="p-2 border-b text-left">カテゴリ</th>
+            <th className="p-2 border-b text-right">金額</th>
+            <th className="p-2 border-b text-left">メモ</th>
+            <th className="p-2 border-b"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {filteredExpenses.map(expense => (
+            <tr key={expense._id} className="hover:bg-gray-50">
+              <td className="p-2 border-b">{formatDate(expense.date)}</td>
+              <td className="p-2 border-b">{expense.category}</td>
+              <td className="p-2 border-b text-right">{Number(expense.amount).toLocaleString()}</td>
+              <td className="p-2 border-b">{expense.description}</td>
+              <td className="p-2 border-b text-center">
+                <button
+                  onClick={() => deleteExpense(expense._id)}
+                  className="text-red-500 hover:text-red-700"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+        <tfoot>
+          <tr className="bg-gray-50 font-bold">
+            <td className="p-2 border-t" colSpan="2">合計</td>
+            <td className="p-2 border-t text-right">{calculateTotal().toLocaleString()}</td>
+            <td className="p-2 border-t" colSpan="2"></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  );
+
   return (
     <div className="w-full max-w-4xl mx-auto bg-white p-4">
       <div className="flex justify-between items-center mb-4">
         <div className="flex gap-2">
-          <button className="px-4 py-2 bg-gray-200 rounded">入力</button>
-          <button className="px-4 py-2 bg-gray-200 rounded">検索</button>
-          <button className="px-4 py-2 bg-gray-200 rounded">一覧</button>
-        </div>
-        <div className="flex items-center gap-2">
-          <input type="text" className="border p-2 rounded" placeholder="フリーワード" />
-          <Camera className="w-6 h-6 text-gray-500" />
+          <button 
+            onClick={() => setActiveTab('list')}
+            className={`px-4 py-2 rounded ${activeTab === 'list' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+          >
+            <List className="w-5 h-5 inline-block mr-1" />
+            一覧
+          </button>
+          <button 
+            onClick={() => setActiveTab('search')}
+            className={`px-4 py-2 rounded ${activeTab === 'search' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+          >
+            <Search className="w-5 h-5 inline-block mr-1" />
+            検索
+          </button>
+          <button 
+            onClick={() => setActiveTab('add')}
+            className={`px-4 py-2 rounded ${activeTab === 'add' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+          >
+            <PlusCircle className="w-5 h-5 inline-block mr-1" />
+            追加
+          </button>
         </div>
       </div>
 
-      <div className="mb-6 space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div className="flex items-center">
-            <span className="w-20">日付</span>
-            <input
-              type="date"
-              value={newExpense.date}
-              onChange={(e) => setNewExpense({ ...newExpense, date: e.target.value })}
-              className="flex-1 p-2 border rounded"
-            />
-          </div>
-          <div className="flex items-center">
-            <span className="w-20">金額</span>
-            <input
-              type="number"
-              value={newExpense.amount}
-              onChange={(e) => setNewExpense({ ...newExpense, amount: e.target.value })}
-              className="flex-1 p-2 border rounded"
-            />
-          </div>
-          <div className="flex items-center">
-            <span className="w-20">分類</span>
-            <select
-              value={newExpense.category}
-              onChange={(e) => setNewExpense({ ...newExpense, category: e.target.value })}
-              className="flex-1 p-2 border rounded"
-            >
-              <option value="">選択してください</option>
-              {categories.map(cat => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </select>
-          </div>
-          <div className="flex items-center">
-            <span className="w-20">メモ</span>
-            <input
-              type="text"
-              value={newExpense.description}
-              onChange={(e) => setNewExpense({ ...newExpense, description: e.target.value })}
-              className="flex-1 p-2 border rounded"
-            />
-          </div>
-        </div>
-        <button
-          onClick={addExpense}
-          className="w-full bg-blue-500 text-white p-2 rounded flex items-center justify-center gap-2 hover:bg-blue-600"
-        >
-          <PlusCircle className="w-5 h-5" />
-          追加
-        </button>
-      </div>
-
-      <div className="border rounded overflow-hidden">
-        <table className="w-full">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="p-2 border-b text-left">日付</th>
-              <th className="p-2 border-b text-left">分類</th>
-              <th className="p-2 border-b text-right">金額</th>
-              <th className="p-2 border-b text-left">メモ</th>
-              <th className="p-2 border-b"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {expenses.map(expense => (
-              <tr key={expense._id} className="hover:bg-gray-50">
-                <td className="p-2 border-b">{formatDate(expense.date)}</td>
-                <td className="p-2 border-b">{expense.category}</td>
-                <td className="p-2 border-b text-right">{Number(expense.amount).toLocaleString()}</td>
-                <td className="p-2 border-b">{expense.description}</td>
-                <td className="p-2 border-b text-center">
-                  <button
-                    onClick={() => deleteExpense(expense._id)}
-                    className="text-red-500 hover:text-red-700"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-          <tfoot>
-            <tr className="bg-gray-50 font-bold">
-              <td className="p-2 border-t" colSpan="2">合計</td>
-              <td className="p-2 border-t text-right">{calculateTotal().toLocaleString()}</td>
-              <td className="p-2 border-t" colSpan="2"></td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
+      {renderContent()}
     </div>
   );
 };
